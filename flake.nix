@@ -19,7 +19,26 @@
           inherit system;
         };
         treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
+        stdenv = pkgs.stdenv;
         zig = pkgs.zig_0_13;
+        test-zap = stdenv.mkDerivation {
+          pname = "test-zap";
+          version = "dev";
+
+          src = ./.;
+
+          nativeBuildInputs = [
+            zig.hook
+          ];
+
+          zigBuildFlags = [
+            "-Doptimize=Debug"
+          ];
+
+          postPatch = ''
+            ln -s ${pkgs.callPackage ./deps.nix { }} $ZIG_GLOBAL_CACHE_DIR/p
+          '';
+        };
       in
       {
         # Use `nix fmt`
@@ -27,7 +46,13 @@
 
         # Use `nix flake check`
         checks = {
+          inherit test-zap;
           formatting = treefmtEval.config.build.check self;
+        };
+
+        packages = {
+          inherit test-zap;
+          default = test-zap;
         };
 
         devShells.default = pkgs.mkShell {
